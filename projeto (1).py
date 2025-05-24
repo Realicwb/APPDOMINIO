@@ -344,6 +344,19 @@ body {
 def get_user_documents_path():
     return str(Path.home() / "Documents")
 
+# Função para verificar e criar pastas necessárias
+def setup_folders():
+    documents_path = get_user_documents_path()
+    required_folders = ['import', 'import2', 'download']
+    
+    for folder in required_folders:
+        folder_path = os.path.join(documents_path, folder)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            st.info(f"Pasta criada: {folder_path}")
+    
+    return documents_path
+
 # Função para ler arquivos de uma pasta
 def ler_arquivos_pasta(pasta, extensoes=['*.xlsx', '*.xls', '*.csv']):
     arquivos = []
@@ -362,8 +375,8 @@ def criar_excel_em_memoria(df):
 # Função para processar as planilhas
 def processar_planilhas(progress_bar, button_placeholder):
     try:
-        # Obter o caminho da pasta Documents do usuário
-        documents_path = get_user_documents_path()
+        # Configurar pastas necessárias
+        documents_path = setup_folders()
         
         # Caminhos das pastas
         import_path = os.path.join(documents_path, 'import')
@@ -371,18 +384,12 @@ def processar_planilhas(progress_bar, button_placeholder):
         download_path = os.path.join(documents_path, 'download')
         
         # Atualizar progresso
-        progress_bar.progress(5, text="Criando pasta de destino...")
+        progress_bar.progress(5, text="Verificando pastas...")
         time.sleep(0.5)
         
-        # Criar pasta download se não existir
-        os.makedirs(download_path, exist_ok=True)
-        
-        # Verificar se as pastas existem
-        if not os.path.exists(import_path):
-            st.error(f"Pasta não encontrada: {import_path}")
-            return None, None
-        if not os.path.exists(import2_path):
-            st.error(f"Pasta não encontrada: {import2_path}")
+        # Verificar se as pastas existem (agora já criadas se não existiam)
+        if not os.path.exists(import_path) or not os.path.exists(import2_path):
+            st.error("As pastas necessárias não foram encontradas e não puderam ser criadas automaticamente.")
             return None, None
         
         progress_bar.progress(15, text="Lendo arquivos da pasta import...")
