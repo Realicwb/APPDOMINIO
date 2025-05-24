@@ -8,7 +8,7 @@ import io
 
 # Configuração da página para remover a barra lateral
 st.set_page_config(
-    page_title="REALI CONSULTORIA",
+    page_title="Consolidador de Planilhas",
     page_icon="📊",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -358,9 +358,9 @@ def criar_excel_em_memoria(df):
 def processar_planilhas(progress_bar, button_placeholder):
     try:
         # Caminhos das pastas
-        import_path = 'C:/Users/bot.reali/Documents/import'
-        import1_path = 'C:/Users/bot.reali/Documents/import1'
-        doalownd_path = 'C:/Users/Downloads'
+        import_path = 'C:/Users/DANILO/OneDrive/Documentos/import'
+        import1_path = 'C:/Users/DANILO/OneDrive/Documentos/import1'
+        doalownd_path = 'C:/Users/DANILO/OneDrive/doalownd'
         
         # Atualizar progresso
         progress_bar.progress(5, text="Criando pasta de destino...")
