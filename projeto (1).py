@@ -342,7 +342,7 @@ body {
 
 # Função para obter o caminho da pasta Documents do usuário
 def get_user_documents_path():
-    return str(Path.home() / "Documents")
+    return str(Path.home() / "Documentos")
 
 # Função para verificar e criar pastas necessárias
 def setup_folders():
