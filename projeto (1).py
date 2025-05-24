@@ -358,8 +358,8 @@ def criar_excel_em_memoria(df):
 def processar_planilhas(progress_bar, button_placeholder):
     try:
         # Caminhos das pastas
-        import_path = 'C:/Users/bot.reali/Documentos/import'
-        import1_path = 'C:/Users/bot.reali/Documentos/import1'
+        import_path = 'C:/Users/bot.reali/Documents/import'
+        import1_path = 'C:/Users/bot.reali/Documents/import1'
         doalownd_path = 'C:/Users/Downloads'
         
         # Atualizar progresso
