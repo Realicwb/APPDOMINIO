@@ -5,10 +5,12 @@ from streamlit.components.v1 import html
 import glob
 import time
 import io
+import requests
+from pathlib import Path
 
 # Configuração da página para remover a barra lateral
 st.set_page_config(
-    page_title="Consolidador de Planilhas",
+    page_title="REALI CONSULTORIA",
     page_icon="📊",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -339,13 +341,6 @@ body {
 </style>
 """
 
-# Função para ler arquivos de uma pasta
-def ler_arquivos_pasta(pasta, extensoes=['*.xlsx', '*.xls', '*.csv']):
-    arquivos = []
-    for ext in extensoes:
-        arquivos.extend(glob.glob(os.path.join(pasta, ext)))
-    return arquivos
-
 # Função para criar um arquivo Excel em memória
 def criar_excel_em_memoria(df):
     output = io.BytesIO()
@@ -354,96 +349,84 @@ def criar_excel_em_memoria(df):
     output.seek(0)
     return output
 
-# Função para processar as planilhas
-def processar_planilhas(progress_bar, button_placeholder):
+# Função para baixar o arquivo de regras do GitHub
+def baixar_regras_github():
+    url = "https://raw.githubusercontent.com/Realicwb/APPDOMINIO/main/Regras.xlsx"
     try:
-        # Caminhos das pastas
-        import_path = 'C:/Users/DANILO/OneDrive/Documentos/import'
-        import1_path = 'C:/Users/DANILO/OneDrive/Documentos/import1'
-        doalownd_path = 'C:/Users/DANILO/OneDrive/doalownd'
+        response = requests.get(url)
+        response.raise_for_status()
+        return io.BytesIO(response.content)
+    except Exception as e:
+        st.error(f"Erro ao baixar arquivo de regras: {str(e)}")
+        return None
+
+# Função para processar as planilhas
+def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
+    try:
+        # Caminho da pasta de destino
+        downloads_path = str(Path.home() / "Downloads")
+        launch_path = os.path.join(downloads_path, "LAUNCH")
         
         # Atualizar progresso
         progress_bar.progress(5, text="Criando pasta de destino...")
         time.sleep(0.5)
         
-        # Criar pasta doalownd se não existir
-        os.makedirs(doalownd_path, exist_ok=True)
+        # Criar pasta LAUNCH se não existir
+        os.makedirs(launch_path, exist_ok=True)
         
-        # Verificar se as pastas existem
-        if not os.path.exists(import_path):
-            st.error(f"Pasta não encontrada: {import_path}")
-            return None, None
-        if not os.path.exists(import1_path):
-            st.error(f"Pasta não encontrada: {import1_path}")
+        # Baixar arquivo de regras do GitHub
+        progress_bar.progress(10, text="Baixando arquivo de regras...")
+        regras_file = baixar_regras_github()
+        if regras_file is None:
             return None, None
         
-        progress_bar.progress(15, text="Lendo arquivos da pasta import...")
+        try:
+            df_import1 = pd.read_excel(regras_file)
+        except Exception as e:
+            st.error(f"Erro ao ler arquivo de regras: {str(e)}")
+            return None, None
+        
+        # Verificar se as colunas necessárias existem no arquivo de regras
+        if not all(col in df_import1.columns for col in ['conta', 'conta contabil']):
+            st.error("Arquivo de regras não contém as colunas necessárias ('conta', 'conta contabil')")
+            return None, None
+        
+        progress_bar.progress(15, text="Processando arquivos importados...")
         time.sleep(0.5)
         
-        # Ler arquivos da pasta import
-        import_files = ler_arquivos_pasta(import_path)
-        if not import_files:
-            st.error(f"Nenhuma planilha encontrada na pasta: {import_path}")
-            return None, None
-        
-        # Ler e concatenar todas as planilhas da pasta import
+        # Processar arquivos importados
         dfs_import = []
-        total_files = len(import_files)
+        total_files = len(arquivos_importados)
         
-        for i, filename in enumerate(import_files):
+        for i, uploaded_file in enumerate(arquivos_importados):
             try:
                 progress_percent = 15 + int((i / total_files) * 30)
                 progress_bar.progress(progress_percent, text=f"Processando arquivo {i+1} de {total_files}...")
                 
-                if filename.endswith('.csv'):
-                    df = pd.read_csv(filename)
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
                 else:
-                    df = pd.read_excel(filename)
+                    df = pd.read_excel(uploaded_file)
                 
                 # Verificar se as colunas necessárias existem
                 required_cols = ['Data', 'conta', 'valor', 'valor2']
                 if not all(col in df.columns for col in required_cols):
-                    st.warning(f"Arquivo {os.path.basename(filename)} não contém todas as colunas necessárias {required_cols}")
+                    st.warning(f"Arquivo {uploaded_file.name} não contém todas as colunas necessárias {required_cols}")
                     continue
                 
                 dfs_import.append(df[required_cols])
             except Exception as e:
-                st.warning(f"Erro ao ler arquivo {filename}: {str(e)}")
+                st.warning(f"Erro ao ler arquivo {uploaded_file.name}: {str(e)}")
                 continue
         
         if not dfs_import:
-            st.error("Nenhum arquivo válido encontrado na pasta import")
+            st.error("Nenhum arquivo válido encontrado nos arquivos importados")
             return None, None
         
         progress_bar.progress(50, text="Concatenando dados...")
         time.sleep(0.5)
         
         df_import = pd.concat(dfs_import, ignore_index=True)
-        
-        progress_bar.progress(60, text="Lendo arquivos da pasta import1...")
-        time.sleep(0.5)
-        
-        # Ler arquivos da pasta import1
-        import1_files = ler_arquivos_pasta(import1_path)
-        if not import1_files:
-            st.error(f"Nenhuma planilha encontrada na pasta: {import1_path}")
-            return None, None
-        
-        # Ler a primeira planilha encontrada na pasta import1
-        filename = import1_files[0]
-        try:
-            if filename.endswith('.csv'):
-                df_import1 = pd.read_csv(filename)
-            else:
-                df_import1 = pd.read_excel(filename)
-        except Exception as e:
-            st.error(f"Erro ao ler arquivo {filename}: {str(e)}")
-            return None, None
-        
-        # Verificar se as colunas necessárias existem
-        if not all(col in df_import1.columns for col in ['conta', 'conta contabil']):
-            st.error(f"Arquivo {os.path.basename(filename)} não contém as colunas necessárias ('conta', 'conta contabil')")
-            return None, None
         
         progress_bar.progress(70, text="Mesclando dados...")
         time.sleep(0.5)
@@ -486,7 +469,7 @@ def processar_planilhas(progress_bar, button_placeholder):
             fim = (i + 1) * 1000
             parte = df_final.iloc[inicio:fim]
             
-            output_path = os.path.join(doalownd_path, f"planilha_consolidada_parte_{i+1}.xlsx")
+            output_path = os.path.join(launch_path, f"planilha_consolidada_parte_{i+1}.xlsx")
             parte.to_excel(output_path, index=False)
         
         progress_bar.progress(100, text="Processamento concluído!")
@@ -501,14 +484,14 @@ def processar_planilhas(progress_bar, button_placeholder):
             <h3 style="margin-top: 10px; margin-bottom: 5px;">Processamento concluído com sucesso!</h3>
             <p style="margin: 5px 0;">Total de linhas processadas: <strong>{total_linhas}</strong></p>
             <p style="margin: 5px 0;">Arquivos gerados: <strong>{num_arquivos}</strong></p>
-            <p style="margin: 5px 0;">Salvo em: <strong>{doalownd_path}</strong></p>
+            <p style="margin: 5px 0;">Salvo em: <strong>{launch_path}</strong></p>
         </div>
         """
         st.markdown(success_message, unsafe_allow_html=True)
         
         # Restaurar o botão original após a conclusão
         with button_placeholder:
-            if st.button('🚀 INICIAR PROCESSAMENTO', key='importar_again', help="Clique para importar e consolidar as planilhas"):
+            if st.button('🚀 PROCESSAR NOVAMENTE', key='importar_again', help="Clique para importar e consolidar as planilhas"):
                 st.session_state.processing = True
         
         return df_final, contas_sem_depara
@@ -518,7 +501,7 @@ def processar_planilhas(progress_bar, button_placeholder):
         progress_bar.empty()
         # Restaurar o botão original em caso de erro
         with button_placeholder:
-            if st.button('🚀 INICIAR PROCESSAMENTO', key='importar_again', help="Clique para importar e consolidar as planilhas"):
+            if st.button('🚀 PROCESSAR NOVAMENTE', key='importar_again', help="Clique para importar e consolidar as planilhas"):
                 st.session_state.processing = True
         return None, None
 
@@ -544,16 +527,24 @@ def main():
         <div style="background: rgba(255, 255, 255, 0.7); border-radius: 15px; padding: 2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
             <h3 style="color: #2E7D32; text-align: center; margin-bottom: 1.5rem;">Instruções</h3>
             <ol style="color: #455A64; padding-left: 1.5rem;">
-                <li style="margin-bottom: 0.5rem;">Certifique-se que os arquivos estão nas pastas corretas</li>
-                <li style="margin-bottom: 0.5rem;">Clique no botão abaixo para iniciar o processamento</li>
+                <li style="margin-bottom: 0.5rem;">Clique no botão "Importar Razões" para selecionar os arquivos Excel</li>
+                <li style="margin-bottom: 0.5rem;">Clique no botão "Processar" para iniciar a consolidação</li>
                 <li style="margin-bottom: 0.5rem;">Aguarde até a conclusão do processo</li>
-                <li>Os arquivos consolidados serão salvos automaticamente</li>
+                <li>Os arquivos consolidados serão salvos automaticamente na pasta LAUNCH dentro de Downloads</li>
             </ol>
         </div>
         """, unsafe_allow_html=True)
     
     # Espaçamento
     st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
+    
+    # Botão para importar arquivos
+    uploaded_files = st.file_uploader(
+        "📤 Importar Razões", 
+        type=['xlsx', 'xls', 'csv'], 
+        accept_multiple_files=True,
+        help="Selecione os arquivos Excel ou CSV que deseja processar"
+    )
     
     # Botão centralizado com efeitos especiais
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -565,15 +556,17 @@ def main():
             st.session_state.contas_sem_depara = None
         
         if not st.session_state.processing:
-            if button_placeholder.button('🚀 INICIAR PROCESSAMENTO', key='importar', help="Clique para importar e consolidar as planilhas"):
+            if uploaded_files and button_placeholder.button('🚀 PROCESSAR', key='processar', help="Clique para processar os arquivos importados"):
                 st.session_state.processing = True
                 st.rerun()
+            elif not uploaded_files:
+                button_placeholder.button('🚀 PROCESSAR', key='processar_disabled', disabled=True, help="Importe arquivos primeiro")
         else:
             # Criar uma barra de progresso
             progress_bar = st.progress(0, text="Preparando para processar...")
             
             # Chamar a função de processamento com a barra de progresso
-            df_final, contas_sem_depara = processar_planilhas(progress_bar, button_placeholder)
+            df_final, contas_sem_depara = processar_planilhas(uploaded_files, progress_bar, button_placeholder)
             
             # Armazenar contas sem depara na sessão
             if contas_sem_depara is not None:
