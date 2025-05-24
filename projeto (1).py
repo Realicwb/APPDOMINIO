@@ -5,11 +5,10 @@ from streamlit.components.v1 import html
 import glob
 import time
 import io
-from pathlib import Path
 
 # Configuração da página para remover a barra lateral
 st.set_page_config(
-    page_title="Consolidador de Planilhas",
+    page_title="REALI CONSULTORIA",
     page_icon="📊",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -340,23 +339,6 @@ body {
 </style>
 """
 
-# Função para obter o caminho da pasta Documents do usuário
-def get_user_documents_path():
-    return str(Path.home() / "Documentos")
-
-# Função para verificar e criar pastas necessárias
-def setup_folders():
-    documents_path = get_user_documents_path()
-    required_folders = ['import', 'import2', 'download']
-    
-    for folder in required_folders:
-        folder_path = os.path.join(documents_path, folder)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            st.info(f"Pasta criada: {folder_path}")
-    
-    return documents_path
-
 # Função para ler arquivos de uma pasta
 def ler_arquivos_pasta(pasta, extensoes=['*.xlsx', '*.xls', '*.csv']):
     arquivos = []
@@ -375,21 +357,24 @@ def criar_excel_em_memoria(df):
 # Função para processar as planilhas
 def processar_planilhas(progress_bar, button_placeholder):
     try:
-        # Configurar pastas necessárias
-        documents_path = setup_folders()
-        
         # Caminhos das pastas
-        import_path = os.path.join(documents_path, 'import')
-        import2_path = os.path.join(documents_path, 'import2')
-        download_path = os.path.join(documents_path, 'download')
+        import_path = 'C:/Users/DANILO/OneDrive/Documentos/import'
+        import1_path = 'C:/Users/DANILO/OneDrive/Documentos/import1'
+        doalownd_path = 'C:/Users/DANILO/OneDrive/doalownd'
         
         # Atualizar progresso
-        progress_bar.progress(5, text="Verificando pastas...")
+        progress_bar.progress(5, text="Criando pasta de destino...")
         time.sleep(0.5)
         
-        # Verificar se as pastas existem (agora já criadas se não existiam)
-        if not os.path.exists(import_path) or not os.path.exists(import2_path):
-            st.error("As pastas necessárias não foram encontradas e não puderam ser criadas automaticamente.")
+        # Criar pasta doalownd se não existir
+        os.makedirs(doalownd_path, exist_ok=True)
+        
+        # Verificar se as pastas existem
+        if not os.path.exists(import_path):
+            st.error(f"Pasta não encontrada: {import_path}")
+            return None, None
+        if not os.path.exists(import1_path):
+            st.error(f"Pasta não encontrada: {import1_path}")
             return None, None
         
         progress_bar.progress(15, text="Lendo arquivos da pasta import...")
@@ -435,28 +420,28 @@ def processar_planilhas(progress_bar, button_placeholder):
         
         df_import = pd.concat(dfs_import, ignore_index=True)
         
-        progress_bar.progress(60, text="Lendo arquivos da pasta import2...")
+        progress_bar.progress(60, text="Lendo arquivos da pasta import1...")
         time.sleep(0.5)
         
-        # Ler arquivos da pasta import2
-        import2_files = ler_arquivos_pasta(import2_path)
-        if not import2_files:
-            st.error(f"Nenhuma planilha encontrada na pasta: {import2_path}")
+        # Ler arquivos da pasta import1
+        import1_files = ler_arquivos_pasta(import1_path)
+        if not import1_files:
+            st.error(f"Nenhuma planilha encontrada na pasta: {import1_path}")
             return None, None
         
-        # Ler a primeira planilha encontrada na pasta import2
-        filename = import2_files[0]
+        # Ler a primeira planilha encontrada na pasta import1
+        filename = import1_files[0]
         try:
             if filename.endswith('.csv'):
-                df_import2 = pd.read_csv(filename)
+                df_import1 = pd.read_csv(filename)
             else:
-                df_import2 = pd.read_excel(filename)
+                df_import1 = pd.read_excel(filename)
         except Exception as e:
             st.error(f"Erro ao ler arquivo {filename}: {str(e)}")
             return None, None
         
         # Verificar se as colunas necessárias existem
-        if not all(col in df_import2.columns for col in ['conta', 'conta contabil']):
+        if not all(col in df_import1.columns for col in ['conta', 'conta contabil']):
             st.error(f"Arquivo {os.path.basename(filename)} não contém as colunas necessárias ('conta', 'conta contabil')")
             return None, None
         
@@ -466,7 +451,7 @@ def processar_planilhas(progress_bar, button_placeholder):
         # Fazer o merge das planilhas
         df_final = pd.merge(
             df_import,
-            df_import2[['conta', 'conta contabil']],
+            df_import1[['conta', 'conta contabil']],
             on='conta',
             how='left'
         )
@@ -501,7 +486,7 @@ def processar_planilhas(progress_bar, button_placeholder):
             fim = (i + 1) * 1000
             parte = df_final.iloc[inicio:fim]
             
-            output_path = os.path.join(download_path, f"planilha_consolidada_parte_{i+1}.xlsx")
+            output_path = os.path.join(doalownd_path, f"planilha_consolidada_parte_{i+1}.xlsx")
             parte.to_excel(output_path, index=False)
         
         progress_bar.progress(100, text="Processamento concluído!")
@@ -516,7 +501,7 @@ def processar_planilhas(progress_bar, button_placeholder):
             <h3 style="margin-top: 10px; margin-bottom: 5px;">Processamento concluído com sucesso!</h3>
             <p style="margin: 5px 0;">Total de linhas processadas: <strong>{total_linhas}</strong></p>
             <p style="margin: 5px 0;">Arquivos gerados: <strong>{num_arquivos}</strong></p>
-            <p style="margin: 5px 0;">Salvo em: <strong>{download_path}</strong></p>
+            <p style="margin: 5px 0;">Salvo em: <strong>{doalownd_path}</strong></p>
         </div>
         """
         st.markdown(success_message, unsafe_allow_html=True)
@@ -559,10 +544,10 @@ def main():
         <div style="background: rgba(255, 255, 255, 0.7); border-radius: 15px; padding: 2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
             <h3 style="color: #2E7D32; text-align: center; margin-bottom: 1.5rem;">Instruções</h3>
             <ol style="color: #455A64; padding-left: 1.5rem;">
-                <li style="margin-bottom: 0.5rem;">Certifique-se que os arquivos estão nas pastas corretas (Documents/import e Documents/import2)</li>
+                <li style="margin-bottom: 0.5rem;">Certifique-se que os arquivos estão nas pastas corretas</li>
                 <li style="margin-bottom: 0.5rem;">Clique no botão abaixo para iniciar o processamento</li>
                 <li style="margin-bottom: 0.5rem;">Aguarde até a conclusão do processo</li>
-                <li>Os arquivos consolidados serão salvos automaticamente na pasta Documents/download</li>
+                <li>Os arquivos consolidados serão salvos automaticamente</li>
             </ol>
         </div>
         """, unsafe_allow_html=True)
