@@ -8,8 +8,10 @@ import io
 import requests
 from pathlib import Path
 import random
+import base64
+import zipfile
 
-# Configuração da página para remover a barra lateral
+# Configuração da página
 st.set_page_config(
     page_title="REALI CONSULTORIA",
     page_icon="📊",
@@ -17,19 +19,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS personalizado premium com container ampliado
-custom_css = """
+# URL da logo
+LOGO_URL = "https://raw.githubusercontent.com/Realicwb/APPDOMINIO/main/logo%20(1).png"
+
+# CSS personalizado com tema claro
+custom_css = f"""
 <style>
-[data-testid="stSidebar"] {
+[data-testid="stSidebar"] {{
     display: none !important;
-}
+}}
 
-[data-testid="collapsedControl"] {
+[data-testid="collapsedControl"] {{
     display: none !important;
-}
+}}
 
-/* Efeito de partículas */
-.particles {
+/* Efeito de partículas suaves */
+.particles {{
     position: fixed;
     top: 0;
     left: 0;
@@ -37,464 +42,242 @@ custom_css = """
     height: 100%;
     z-index: -1;
     overflow: hidden;
-}
+}}
 
-.particle {
+.particle {{
     position: absolute;
-    background: rgba(76, 175, 80, 0.5);
+    background: rgba(100, 181, 246, 0.3);
     border-radius: 50%;
     pointer-events: none;
-}
+}}
 
-/* Animação de fundo gradiente premium */
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+/* Animação de fundo gradiente claro */
+@keyframes gradientBG {{
+    0% {{ background-position: 0% 50%; }}
+    50% {{ background-position: 100% 50%; }}
+    100% {{ background-position: 0% 50%; }}
+}}
 
-/* Animação de flutuação 3D */
-@keyframes float3D {
-    0% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
-    50% { transform: translateY(-20px) rotateX(5deg) rotateY(5deg); }
-    100% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
-}
+/* Efeito de flutuação suave */
+@keyframes float {{
+    0% {{ transform: translateY(0px); }}
+    50% {{ transform: translateY(-10px); }}
+    100% {{ transform: translateY(0px); }}
+}}
 
-/* Efeito de pulso neon */
-@keyframes pulseNeon {
-    0% { box-shadow: 0 0 5px 0 rgba(76, 175, 80, 0.7), 0 0 20px 0 rgba(76, 175, 80, 0.5); }
-    70% { box-shadow: 0 0 20px 15px rgba(76, 175, 80, 0), 0 0 40px 30px rgba(76, 175, 80, 0); }
-    100% { box-shadow: 0 0 5px 0 rgba(76, 175, 80, 0), 0 0 20px 0 rgba(76, 175, 80, 0); }
-}
+/* Efeito de pulso suave */
+@keyframes pulse {{
+    0% {{ box-shadow: 0 0 0 0 rgba(66, 165, 245, 0.4); }}
+    70% {{ box-shadow: 0 0 0 10px rgba(66, 165, 245, 0); }}
+    100% {{ box-shadow: 0 0 0 0 rgba(66, 165, 245, 0); }}
+}}
 
-/* Efeito de digitação */
-@keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
-}
-
-/* Efeito de cursor piscando */
-@keyframes blink-caret {
-    from, to { border-color: transparent }
-    50% { border-color: #4CAF50 }
-}
-
-/* Efeito de onda */
-@keyframes wave {
-    0% { transform: rotate(0deg); }
-    10% { transform: rotate(14deg); }
-    20% { transform: rotate(-8deg); }
-    30% { transform: rotate(14deg); }
-    40% { transform: rotate(-4deg); }
-    50% { transform: rotate(10deg); }
-    60% { transform: rotate(0deg); }
-    100% { transform: rotate(0deg); }
-}
-
-/* Efeito de zoom suave */
-@keyframes smoothZoom {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-body {
-    background: linear-gradient(270deg, #0a192f, #172a45, #303f60, #4a648f);
+body {{
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb, #90caf9, #64b5f6);
     background-size: 400% 400%;
-    animation: gradientBG 18s ease infinite;
+    animation: gradientBG 15s ease infinite;
     font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    color: #f8f9fa;
-    overflow-x: hidden;
-}
+    color: #333;
+}}
 
-/* CONTAINER PRINCIPAL AMPLIADO */
-.stApp {
-    background-color: rgba(10, 25, 47, 0.92);
-    backdrop-filter: blur(12px);
-    border-radius: 24px;
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
-    padding: 3rem;
-    max-width: 1200px;  /* AUMENTEI A LARGURA MÁXIMA */
-    min-width: 900px;   /* ADICIONEI LARGURA MÍNIMA */
-    margin: 3rem auto;
-    border: 1px solid rgba(76, 175, 80, 0.2);
-    animation: float3D 8s ease-in-out infinite;
-    position: relative;
-    z-index: 1;
-    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-    min-height: 80vh;   /* ADICIONEI ALTURA MÍNIMA */
-}
+/* Container principal */
+.stApp {{
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(30, 136, 229, 0.1);
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 2rem auto;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: float 6s ease-in-out infinite;
+}}
 
-.stApp:hover {
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
-    transform: translateY(-5px) scale(1.005);
-}
+/* Logo dentro do container */
+.logo-container {{
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}}
 
-/* Botões premium com efeitos avançados */
-.stButton>button {
-    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+.logo-img {{
+    height: 40px;
+    margin-right: 15px;
+    transition: all 0.3s ease;
+}}
+
+.logo-img:hover {{
+    transform: scale(1.05);
+}}
+
+/* Botões principais */
+.stButton>button {{
+    background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
     color: white;
     border: none;
-    padding: 20px 40px;
+    padding: 12px 28px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 18px;
-    margin: 12px 0;
+    font-size: 16px;
+    margin: 8px 0;
     cursor: pointer;
-    border-radius: 50px;
-    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 8px 16px rgba(46, 125, 50, 0.4);
+    border-radius: 30px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.2);
+    font-weight: 600;
+    width: 100%;
+    max-width: 350px;
+}}
+
+.stButton>button:hover {{
+    background: linear-gradient(135deg, #3d9ae8 0%, #1976d2 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(30, 136, 229, 0.3);
+    animation: pulse 1.5s infinite;
+}}
+
+/* Títulos */
+.title {{
+    color: #1565c0;
     font-weight: 700;
-    width: 100%;
-    max-width: 400px;
-    position: relative;
-    overflow: hidden;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    z-index: 1;
-    font-family: 'Poppins', sans-serif;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
+    font-size: 2.2rem;
+    margin: 0;
+}}
 
-.stButton>button:hover {
-    background: linear-gradient(135deg, #43A047 0%, #1B5E20 100%);
-    transform: translateY(-8px) scale(1.05);
-    box-shadow: 0 16px 24px rgba(46, 125, 50, 0.6);
-    animation: pulseNeon 2s infinite;
-}
+.subtitle {{
+    color: #42a5f5;
+    font-weight: 500;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}}
 
-.stButton>button:active {
-    transform: translateY(4px) scale(0.98);
-    box-shadow: 0 6px 12px rgba(46, 125, 50, 0.5);
-    transition: all 0.1s;
-}
-
-.stButton>button:after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 10px;
-    height: 10px;
-    background: rgba(255, 255, 255, 0.6);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1, 1) translate(-50%);
-    transform-origin: 50% 50%;
-    z-index: -1;
-}
-
-.stButton>button:focus:not(:active)::after {
-    animation: ripple 1.2s ease-out;
-}
-
-@keyframes ripple {
-    0% {
-        transform: scale(0, 0);
-        opacity: 0.6;
-    }
-    100% {
-        transform: scale(50, 50);
-        opacity: 0;
-    }
-}
-
-.stButton>button::before {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
-    z-index: -2;
-    background: linear-gradient(135deg, #4CAF50, #81C784, #A5D6A7, #C8E6C9);
-    background-size: 400%;
-    border-radius: 54px;
-    opacity: 0;
-    transition: 0.7s;
-    filter: blur(8px);
-}
-
-.stButton>button:hover::before {
-    opacity: 0.8;
-    animation: gradientBG 4s linear infinite;
-}
-
-/* Título com efeito de digitação */
-.title-container {
-    text-align: center;
-    margin-bottom: 3rem;
-}
-
-.title {
-    color: #64ffda;
-    font-weight: 800;
-    font-size: 2.8rem;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    position: relative;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
-    border-right: 4px solid #64ffda;
-}
-
-.title::after {
-    content: '';
-    display: block;
-    width: 120px;
-    height: 4px;
-    background: linear-gradient(90deg, #64ffda, transparent);
-    margin: 15px auto;
-    border-radius: 2px;
-}
-
-/* Mensagem de sucesso premium */
-.success-message {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2));
-    color: #64ffda;
-    padding: 2rem;
-    border-radius: 16px;
-    text-align: center;
-    margin-top: 2rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    border-left: 5px solid #64ffda;
-    animation: slideIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    transform-origin: top center;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(100, 255, 218, 0.2);
-}
-
-@keyframes slideIn {
-    0% {
-        opacity: 0;
-        transform: perspective(600px) rotateX(-45deg) translateY(-30px);
-    }
-    100% {
-        opacity: 1;
-        transform: perspective(600px) rotateX(0deg) translateY(0);
-    }
-}
-
-/* Card hover effects */
-.card {
-    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-    cursor: pointer;
-    background: rgba(23, 42, 69, 0.7);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(100, 255, 218, 0.1);
-}
-
-.card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    background: rgba(23, 42, 69, 0.9);
-    border: 1px solid rgba(100, 255, 218, 0.3);
-}
-
-/* Spinner personalizado */
-.stSpinner>div>div {
-    border-color: #64ffda transparent transparent transparent !important;
-}
-
-/* Tooltip premium */
-.tooltip {
-    position: relative;
-    display: inline-block;
-}
-
-.tooltip .tooltiptext {
-    visibility: hidden;
-    width: 220px;
-    background-color: #1B5E20;
-    color: #fff;
-    text-align: center;
-    border-radius: 8px;
-    padding: 12px;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-size: 14px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* Barra de progresso premium */
-.progress-container {
-    width: 100%;
-    height: 8px;
-    background: rgba(23, 42, 69, 0.8);
-    border-radius: 4px;
-    margin-top: 12px;
-    overflow: hidden;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #64ffda, #4CAF50);
-    border-radius: 4px;
-    width: 0%;
-    transition: width 0.4s ease;
-    position: relative;
-}
-
-.progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, 
-                              rgba(255,255,255,0) 0%, 
-                              rgba(255,255,255,0.3) 50%, 
-                              rgba(255,255,255,0) 100%);
-    animation: shine 2s infinite;
-}
-
-@keyframes shine {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
-/* Botão de extrair premium */
-.btn-extrair {
-    background: linear-gradient(135deg, #FF5722 0%, #E64A19 100%) !important;
-    box-shadow: 0 8px 16px rgba(230, 74, 25, 0.4) !important;
-}
-
-.btn-extrair:hover {
-    background: linear-gradient(135deg, #F4511E 0%, #D84315 100%) !important;
-    box-shadow: 0 16px 24px rgba(230, 74, 25, 0.6) !important;
-    animation: pulseNeon 2s infinite !important;
-}
-
-/* Seção de contas sem depara premium */
-.contas-sem-depara-info {
-    background: rgba(255, 243, 224, 0.1);
-    border-left: 4px solid #FF9800;
+/* Cards */
+.card {{
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
     padding: 1.5rem;
-    border-radius: 0 12px 12px 0;
-    margin: 2rem 0;
-    font-size: 1rem;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 152, 0, 0.2);
-    animation: smoothZoom 3s ease infinite;
-}
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.1);
+    border: 1px solid rgba(66, 165, 245, 0.1);
+    transition: all 0.3s ease;
+}}
 
-/* Efeito de onda no ícone */
-.wave {
-    animation-name: wave;
-    animation-duration: 2.5s;
-    animation-iteration-count: infinite;
-    transform-origin: 70% 70%;
-    display: inline-block;
-}
+.card:hover {{
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(30, 136, 229, 0.15);
+}}
 
-/* Responsividade premium */
-@media (max-width: 1200px) {
-    .stApp {
-        max-width: 95%;
-        min-width: auto;
-        padding: 2.5rem;
-        margin: 2rem auto;
-    }
-}
+/* Mensagens de sucesso */
+.success-message {{
+    background: rgba(200, 230, 201, 0.8);
+    color: #2e7d32;
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    margin-top: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left: 5px solid #4caf50;
+    animation: slideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}}
 
-@media (max-width: 768px) {
-    .stApp {
-        padding: 2rem;
-        margin: 1.5rem;
-        border-radius: 20px;
-        max-width: 95%;
-    }
-    
-    .title {
-        font-size: 2.2rem;
-        animation: none;
-        border-right: none;
-        white-space: normal;
-    }
-    
-    .stButton>button {
-        padding: 18px 32px;
-        font-size: 16px;
-    }
-    
-    .card {
+@keyframes slideIn {{
+    0% {{
+        opacity: 0;
+        transform: translateY(-20px);
+    }}
+    100% {{
+        opacity: 1;
+        transform: translateY(0);
+    }}
+}}
+
+/* Barra de progresso */
+.progress-container {{
+    width: 100%;
+    height: 6px;
+    background: #e3f2fd;
+    border-radius: 3px;
+    margin-top: 10px;
+    overflow: hidden;
+}}
+
+.progress-bar {{
+    height: 100%;
+    background: linear-gradient(90deg, #42a5f5, #64b5f6);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+}}
+
+/* Botão de download */
+.btn-download {{
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%) !important;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2) !important;
+}}
+
+.btn-download:hover {{
+    background: linear-gradient(135deg, #43a047 0%, #1b5e20 100%) !important;
+    box-shadow: 0 8px 16px rgba(46, 125, 50, 0.3) !important;
+}}
+
+/* Seção de contas sem depara */
+.contas-sem-depara-info {{
+    background: rgba(255, 243, 224, 0.8);
+    border-left: 4px solid #ff9800;
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+}}
+
+/* Responsividade */
+@media (max-width: 768px) {{
+    .stApp {{
         padding: 1.5rem;
-    }
-}
-
-/* Efeito de foco nos inputs */
-.stTextInput>div>div>input:focus, 
-.stFileUploader>div>div>div>div>button:focus {
-    border-color: #64ffda !important;
-    box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.3) !important;
-}
-
-/* Efeito de hover no file uploader */
-.stFileUploader>div>div>div>div>button:hover {
-    border-color: #64ffda !important;
-    background-color: rgba(100, 255, 218, 0.1) !important;
-}
-
-/* Efeito de transição suave para todos os elementos */
-* {
-    transition: all 0.3s ease-out;
-}
+        margin: 1rem;
+        border-radius: 12px;
+    }}
+    
+    .title {{
+        font-size: 1.8rem;
+    }}
+    
+    .logo-img {{
+        height: 35px;
+    }}
+}}
 </style>
 """
 
 # JavaScript para partículas animadas
 particles_js = """
 <script>
-// Criação de partículas animadas
 document.addEventListener('DOMContentLoaded', function() {
     const particlesContainer = document.createElement('div');
     particlesContainer.className = 'particles';
     document.body.appendChild(particlesContainer);
     
-    // Criar partículas
-    const particleCount = 30;
+    const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         
-        // Tamanho aleatório entre 2px e 6px
-        const size = Math.random() * 4 + 2;
+        const size = Math.random() * 5 + 2;
         particle.style.width = `${size}px`;
         particle.style.height = `${size}px`;
         
-        // Posição aleatória
         particle.style.left = `${Math.random() * 100}%`;
         particle.style.top = `${Math.random() * 100}%`;
         
-        // Opacidade aleatória
-        particle.style.opacity = Math.random() * 0.6 + 0.1;
+        particle.style.opacity = Math.random() * 0.4 + 0.1;
         
-        // Animação individual
-        const duration = Math.random() * 20 + 10;
-        const delay = Math.random() * 10;
-        particle.style.animation = `float ${duration}s ease-in-out ${delay}s infinite alternate`;
+        const duration = Math.random() * 15 + 10;
+        const delay = Math.random() * 5;
+        particle.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
         
-        // Adicionar ao container
         particlesContainer.appendChild(particle);
     }
 });
@@ -508,6 +291,15 @@ def criar_excel_em_memoria(df):
         df.to_excel(writer, index=False, sheet_name='Contas sem depara')
     output.seek(0)
     return output
+
+# Função para criar um arquivo ZIP em memória com todos os arquivos
+def criar_zip_em_memoria(arquivos):
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+        for i, arquivo in enumerate(arquivos):
+            zip_file.writestr(f"planilha_consolidada_parte_{i+1}.xlsx", arquivo.getvalue())
+    zip_buffer.seek(0)
+    return zip_buffer
 
 # Função para baixar o arquivo de regras do GitHub
 def baixar_regras_github():
@@ -523,33 +315,22 @@ def baixar_regras_github():
 # Função para processar as planilhas
 def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
     try:
-        # Caminho da pasta de destino
-        downloads_path = str(Path.home() / "Downloads")
-        launch_path = os.path.join(downloads_path, "LAUNCH")
-        
-        # Atualizar progresso
-        progress_bar.progress(5, text="Criando pasta de destino...")
-        time.sleep(0.5)
-        
-        # Criar pasta LAUNCH se não existir
-        os.makedirs(launch_path, exist_ok=True)
-        
         # Baixar arquivo de regras do GitHub
-        progress_bar.progress(10, text="Baixando arquivo de regras...")
+        progress_bar.progress(5, text="Baixando arquivo de regras...")
         regras_file = baixar_regras_github()
         if regras_file is None:
-            return None, None
+            return None, None, None
         
         try:
             df_import1 = pd.read_excel(regras_file)
         except Exception as e:
             st.error(f"Erro ao ler arquivo de regras: {str(e)}")
-            return None, None
+            return None, None, None
         
-        # Verificar se as colunas necessárias existem no arquivo de regras
+        # Verificar colunas necessárias
         if not all(col in df_import1.columns for col in ['conta', 'conta contabil']):
-            st.error("Arquivo de regras não contém as colunas necessárias ('conta', 'conta contabil')")
-            return None, None
+            st.error("Arquivo de regras não contém as colunas necessárias")
+            return None, None, None
         
         progress_bar.progress(15, text="Processando arquivos importados...")
         time.sleep(0.5)
@@ -568,10 +349,9 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
                 else:
                     df = pd.read_excel(uploaded_file)
                 
-                # Verificar se as colunas necessárias existem
                 required_cols = ['Data', 'conta', 'valor', 'valor2']
                 if not all(col in df.columns for col in required_cols):
-                    st.warning(f"Arquivo {uploaded_file.name} não contém todas as colunas necessárias {required_cols}")
+                    st.warning(f"Arquivo {uploaded_file.name} não contém todas as colunas necessárias")
                     continue
                 
                 dfs_import.append(df[required_cols])
@@ -580,8 +360,8 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
                 continue
         
         if not dfs_import:
-            st.error("Nenhum arquivo válido encontrado nos arquivos importados")
-            return None, None
+            st.error("Nenhum arquivo válido encontrado")
+            return None, None, None
         
         progress_bar.progress(50, text="Concatenando dados...")
         time.sleep(0.5)
@@ -599,7 +379,7 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
             how='left'
         )
         
-        # Criar dataframe com contas sem depara (NAN)
+        # Criar dataframe com contas sem depara
         contas_sem_depara = df_final[df_final['conta contabil'].isna()].copy()
         contas_sem_depara = contas_sem_depara[['conta', 'Data', 'valor', 'valor2']]
         contas_sem_depara = contas_sem_depara.drop_duplicates(subset=['conta'])
@@ -617,55 +397,55 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
         # Remover linhas com conta contabil vazia
         df_final = df_final.dropna(subset=['conta contabil'])
         
-        progress_bar.progress(90, text="Salvando arquivos...")
+        progress_bar.progress(90, text="Preparando arquivos para download...")
         time.sleep(0.5)
         
-        # Salvar a planilha consolidada em arquivos de 1000 linhas cada
+        # Salvar a planilha consolidada em arquivos de 1000 linhas cada (em memória)
         total_linhas = len(df_final)
         num_arquivos = (total_linhas // 1000) + (1 if total_linhas % 1000 != 0 else 0)
+        arquivos_gerados = []
         
         for i in range(num_arquivos):
             inicio = i * 1000
             fim = (i + 1) * 1000
             parte = df_final.iloc[inicio:fim]
             
-            output_path = os.path.join(launch_path, f"planilha_consolidada_parte_{i+1}.xlsx")
-            parte.to_excel(output_path, index=False)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                parte.to_excel(writer, index=False)
+            output.seek(0)
+            arquivos_gerados.append(output)
         
         progress_bar.progress(100, text="Processamento concluído!")
         time.sleep(0.5)
         
         success_message = f"""
         <div class="success-message">
-            <div class="wave">
-                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-            </div>
-            <h3 style="margin-top: 16px; margin-bottom: 8px; color: #64ffda;">PROCESSAMENTO CONCLUÍDO COM SUCESSO!</h3>
-            <p style="margin: 8px 0; color: #a8b2d1;">Total de linhas processadas: <strong style="color: #64ffda;">{total_linhas}</strong></p>
-            <p style="margin: 8px 0; color: #a8b2d1;">Arquivos gerados: <strong style="color: #64ffda;">{num_arquivos}</strong></p>
-            <p style="margin: 8px 0; color: #a8b2d1;">Salvo em: <strong style="color: #64ffda;">{launch_path}</strong></p>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <h3 style="margin-top: 10px; margin-bottom: 5px;">Processamento concluído com sucesso!</h3>
+            <p style="margin: 5px 0;">Total de linhas processadas: <strong>{total_linhas}</strong></p>
+            <p style="margin: 5px 0;">Arquivos gerados: <strong>{num_arquivos}</strong></p>
         </div>
         """
         st.markdown(success_message, unsafe_allow_html=True)
         
-        # Restaurar o botão original após a conclusão
+        # Restaurar o botão original
         with button_placeholder:
-            if st.button('🚀 PROCESSAR NOVAMENTE', key='importar_again', help="Clique para importar e consolidar as planilhas"):
+            if st.button('🔄 PROCESSAR NOVAMENTE', key='importar_again'):
                 st.session_state.processing = True
         
-        return df_final, contas_sem_depara
+        return df_final, contas_sem_depara, arquivos_gerados
         
     except Exception as e:
         st.error(f"Ocorreu um erro: {str(e)}")
         progress_bar.empty()
-        # Restaurar o botão original em caso de erro
         with button_placeholder:
-            if st.button('🚀 PROCESSAR NOVAMENTE', key='importar_again', help="Clique para importar e consolidar as planilhas"):
+            if st.button('🔄 PROCESSAR NOVAMENTE', key='importar_again'):
                 st.session_state.processing = True
-        return None, None
+        return None, None, None
 
 # Interface do aplicativo
 def main():
@@ -673,47 +453,39 @@ def main():
     st.markdown(custom_css, unsafe_allow_html=True)
     html(particles_js, height=0, width=0)
     
-    # Título do aplicativo com efeito de digitação
-    st.markdown("""
-    <div class="title-container">
-        <h1 class="title">📊 IMPORTADOR DE LANÇAMENTOS DOMINIO</h1>
+    # Logo e título
+    st.markdown(f"""
+    <div class="logo-container">
+        <img src="{LOGO_URL}" class="logo-img" alt="Logo RealI Consultoria">
+        <div>
+            <h1 class="title">Importador de Lançamentos DOMINIO</h1>
+            <p class="subtitle">Consolidação automática de planilhas</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Descrição premium
-    st.markdown("""
-    <div style="text-align: center; margin-bottom: 3rem; color: #a8b2d1; font-size: 1.1rem; line-height: 1.6; letter-spacing: 0.5px;">
-        <p style="margin-bottom: 8px;">Esta ferramenta premium consolida automaticamente planilhas de diferentes formatos</p>
-        <p style="margin-top: 0;">em um único arquivo padronizado para análise com tecnologia avançada.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Container principal com efeito de card premium
+    # Card de instruções
     with st.container():
         st.markdown("""
         <div class="card">
-            <h3 style="color: #64ffda; text-align: center; margin-bottom: 1.5rem; font-weight: 600;">INSTRUÇÕES DE USO</h3>
-            <ol style="color: #a8b2d1; padding-left: 1.5rem; line-height: 1.8;">
-                <li style="margin-bottom: 0.8rem;">Clique no botão <strong style="color: #64ffda;">"Importar Razões"</strong> para selecionar os arquivos Excel ou CSV</li>
-                <li style="margin-bottom: 0.8rem;">Clique no botão <strong style="color: #64ffda;">"Processar"</strong> para iniciar a consolidação automatizada</li>
-                <li style="margin-bottom: 0.8rem;">Acompanhe o progresso pela barra de carregamento animada</li>
-                <li>Os arquivos consolidados serão salvos automaticamente na pasta <strong style="color: #64ffda;">LAUNCH</strong> dentro de Downloads</li>
+            <h3 style="color: #1565c0; margin-bottom: 1rem;">Instruções de Uso</h3>
+            <ol style="color: #333; padding-left: 1.5rem;">
+                <li style="margin-bottom: 0.5rem;">Selecione os arquivos Excel/CSV no botão abaixo</li>
+                <li style="margin-bottom: 0.5rem;">Clique em "Processar" para iniciar a consolidação</li>
+                <li>Após o processamento, clique em "Baixar Arquivos" para obter os resultados</li>
             </ol>
         </div>
         """, unsafe_allow_html=True)
     
-    # Espaçamento
-    st.markdown("<div style='height: 2.5rem;'></div>", unsafe_allow_html=True)
-    
-    # Botão para importar arquivos com estilo premium
+    # Upload de arquivos
     uploaded_files = st.file_uploader(
-        "📤 Importar Razões", 
+        "📤 Selecione os arquivos para importar", 
         type=['xlsx', 'xls', 'csv'], 
         accept_multiple_files=True,
         help="Selecione os arquivos Excel ou CSV que deseja processar"
     )
     
-    # Botão centralizado com efeitos especiais premium
+    # Botão de processamento
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         button_placeholder = st.empty()
@@ -721,45 +493,56 @@ def main():
         if 'processing' not in st.session_state:
             st.session_state.processing = False
             st.session_state.contas_sem_depara = None
+            st.session_state.arquivos_gerados = None
         
         if not st.session_state.processing:
-            if uploaded_files and button_placeholder.button('🚀 INICIAR PROCESSAMENTO', key='processar', help="Clique para processar os arquivos importados"):
+            if uploaded_files and button_placeholder.button('⚙️ PROCESSAR', key='processar'):
                 st.session_state.processing = True
                 st.rerun()
             elif not uploaded_files:
-                button_placeholder.button('🚀 INICIAR PROCESSAMENTO', key='processar_disabled', disabled=True, help="Importe arquivos primeiro")
+                button_placeholder.button('⚙️ PROCESSAR', key='processar_disabled', disabled=True)
         else:
-            # Criar uma barra de progresso premium
             progress_bar = st.progress(0, text="Preparando para processar...")
+            df_final, contas_sem_depara, arquivos_gerados = processar_planilhas(uploaded_files, progress_bar, button_placeholder)
             
-            # Chamar a função de processamento com a barra de progresso
-            df_final, contas_sem_depara = processar_planilhas(uploaded_files, progress_bar, button_placeholder)
-            
-            # Armazenar contas sem depara na sessão
             if contas_sem_depara is not None:
                 st.session_state.contas_sem_depara = contas_sem_depara
+            if arquivos_gerados is not None:
+                st.session_state.arquivos_gerados = arquivos_gerados
             
-            # Remover a barra de progresso após um breve delay
             time.sleep(1)
             progress_bar.empty()
             st.session_state.processing = False
     
-    # Seção para extrair contas sem depara (sem mostrar a tabela)
+    # Seção de download dos arquivos processados
+    if st.session_state.get('arquivos_gerados'):
+        st.markdown("---")
+        
+        # Botão para baixar todos os arquivos como ZIP
+        zip_buffer = criar_zip_em_memoria(st.session_state.arquivos_gerados)
+        st.download_button(
+            label="📥 BAIXAR ARQUIVOS (ZIP)",
+            data=zip_buffer,
+            file_name="lancamentos_processados.zip",
+            mime="application/zip",
+            key='download_zip',
+            help="Clique para baixar todos os arquivos processados em um ZIP",
+            use_container_width=True
+        )
+    
+    # Seção para contas sem depara
     if st.session_state.get('contas_sem_depara') is not None and not st.session_state.contas_sem_depara.empty:
         st.markdown("---")
         
         num_contas_sem_depara = len(st.session_state.contas_sem_depara)
         
-        # Mensagem informativa sobre contas sem depara premium
         st.markdown(f"""
         <div class="contas-sem-depara-info">
-            <strong style="color: #FF9800; font-size: 1.1rem;">⚠️ ATENÇÃO: {num_contas_sem_depara} CONTAS SEM CORRESPONDÊNCIA</strong><br>
-            <p style="margin: 8px 0 0; color: #a8b2d1;">Foram identificadas contas que não possuem mapeamento no sistema. 
-            Você pode baixar a lista completa para análise clicando no botão abaixo.</p>
+            <strong>⚠️ Foram encontradas {num_contas_sem_depara} contas sem correspondência no depara.</strong><br>
+            Você pode baixar a lista completa clicando no botão abaixo.
         </div>
         """, unsafe_allow_html=True)
         
-        # Botão premium para baixar contas sem depara
         excel_file = criar_excel_em_memoria(st.session_state.contas_sem_depara)
         st.download_button(
             label="📥 BAIXAR CONTAS SEM DEPARA",
