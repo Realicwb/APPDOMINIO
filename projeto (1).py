@@ -13,8 +13,8 @@ import zipfile
 
 # Configuração da página
 st.set_page_config(
-    page_title="REALI CONSULTORIA",
-    page_icon="📊",
+    page_title="REALI AUTOMAÇÃO",
+    page_icon="🐍",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
