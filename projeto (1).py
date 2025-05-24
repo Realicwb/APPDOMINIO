@@ -22,7 +22,7 @@ st.set_page_config(
 # URL da logo
 LOGO_URL = "https://raw.githubusercontent.com/Realicwb/APPDOMINIO/main/logo%20(1).png"
 
-# CSS personalizado com tema claro
+# CSS personalizado com tema claro e logo centralizada
 custom_css = f"""
 <style>
 [data-testid="stSidebar"] {{
@@ -95,21 +95,28 @@ body {{
     animation: float 6s ease-in-out infinite;
 }}
 
-/* Logo dentro do container */
-.logo-container {{
+/* Logo centralizada */
+.logo-header {{
     display: flex;
-    align-items: center;
+    justify-content: center;
     margin-bottom: 1.5rem;
 }}
 
 .logo-img {{
-    height: 40px;
-    margin-right: 15px;
+    height: 80px;
     transition: all 0.3s ease;
 }}
 
 .logo-img:hover {{
     transform: scale(1.05);
+}}
+
+.subtitle {{
+    color: #42a5f5;
+    font-weight: 500;
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: 2rem;
 }}
 
 /* Botões principais */
@@ -137,21 +144,6 @@ body {{
     transform: translateY(-3px);
     box-shadow: 0 8px 16px rgba(30, 136, 229, 0.3);
     animation: pulse 1.5s infinite;
-}}
-
-/* Títulos */
-.title {{
-    color: #1565c0;
-    font-weight: 700;
-    font-size: 2.2rem;
-    margin: 0;
-}}
-
-.subtitle {{
-    color: #42a5f5;
-    font-weight: 500;
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
 }}
 
 /* Cards */
@@ -241,12 +233,8 @@ body {{
         border-radius: 12px;
     }}
     
-    .title {{
-        font-size: 1.8rem;
-    }}
-    
     .logo-img {{
-        height: 35px;
+        height: 60px;
     }}
 }}
 </style>
@@ -453,15 +441,12 @@ def main():
     st.markdown(custom_css, unsafe_allow_html=True)
     html(particles_js, height=0, width=0)
     
-    # Logo e título
+    # Logo centralizada
     st.markdown(f"""
-    <div class="logo-container">
+    <div class="logo-header">
         <img src="{LOGO_URL}" class="logo-img" alt="Logo RealI Consultoria">
-        <div>
-            <h1 class="title">Importador de Lançamentos DOMINIO</h1>
-            <p class="subtitle">Consolidação automática de planilhas</p>
-        </div>
     </div>
+    <p class="subtitle">Consolidação automática de planilhas</p>
     """, unsafe_allow_html=True)
     
     # Card de instruções
