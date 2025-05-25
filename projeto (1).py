@@ -23,7 +23,7 @@ st.set_page_config(
 # URL da logo
 LOGO_URL = "https://raw.githubusercontent.com/Realicwb/APPDOMINIO/main/logo%20(1).png"
 
-# CSS personalizado com tema claro e logo centralizada
+# CSS personalizado com tema claro e logo centralizada e animação de carregamento
 custom_css = f"""
 <style>
 [data-testid="stSidebar"] {{
@@ -71,6 +71,12 @@ custom_css = f"""
     0% {{ box-shadow: 0 0 0 0 rgba(66, 165, 245, 0.4); }}
     70% {{ box-shadow: 0 0 0 10px rgba(66, 165, 245, 0); }}
     100% {{ box-shadow: 0 0 0 0 rgba(66, 165, 245, 0); }}
+}}
+
+/* Animação do spinner de carregamento */
+@keyframes spin {{
+    0% {{ transform: rotate(0deg); }}
+    100% {{ transform: rotate(360deg); }}
 }}
 
 body {{
@@ -187,23 +193,31 @@ body {{
     }}
 }}
 
-/* Barra de progresso */
-.progress-container {{
-    width: 100%;
-    height: 6px;
-    background: #e3f2fd;
-    border-radius: 3px;
-    margin-top: 10px;
-    overflow: hidden;
+/* Spinner de carregamento */
+.loader-container {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }}
 
-.progress-bar {{
-    height: 100%;
-    background: linear-gradient(90deg, #42a5f5, #64b5f6);
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.3s ease;
+.loader {{
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
 }}
+
+.loader-text {{
+    margin-top: 10px;
+    color: #555;
+    font-size: 1.1em;
+}}
+
 
 /* Botão de download */
 .btn-download {{
@@ -224,6 +238,16 @@ body {{
     border-radius: 0 8px 8px 0;
     margin: 1.5rem 0;
     font-size: 0.95rem;
+}}
+
+/* Rodapé */
+footer {{
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    color: #666;
+    font-size: 0.9rem;
 }}
 
 /* Responsividade */
@@ -315,26 +339,38 @@ def baixar_regras_github():
         return None
 
 # Função para processar as planilhas
-def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
+def processar_planilhas(arquivos_importados, spinner_placeholder, button_placeholder):
     try:
+        # Exibir spinner e texto de carregamento
+        with spinner_placeholder:
+            st.markdown("""
+            <div class="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Processando...</div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.write("Baixando arquivo de regras...") # Exibe um texto adicional
+
         # Baixar arquivo de regras do GitHub
-        progress_bar.progress(5, text="Baixando arquivo de regras...")
         regras_file = baixar_regras_github()
         if regras_file is None:
+            spinner_placeholder.empty()
             return None, None, None
         
         try:
             df_import1 = pd.read_excel(regras_file)
         except Exception as e:
+            spinner_placeholder.empty()
             st.error(f"Erro ao ler arquivo de regras: {str(e)}")
             return None, None, None
         
-        # Verificar colunas necessárias
-        if not all(col in df_import1.columns for col in ['Conta controle', 'conta contabil']):
-            st.error("Arquivo de regras não contém as colunas necessárias")
-            return None, None, None
-        
-        progress_bar.progress(15, text="Processando arquivos importados...")
+        with spinner_placeholder:
+            st.markdown("""
+            <div class="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Processando arquivos importados...</div>
+            </div>
+            """, unsafe_allow_html=True)
         time.sleep(0.5)
         
         # Processar arquivos importados
@@ -343,8 +379,13 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
         
         for i, uploaded_file in enumerate(arquivos_importados):
             try:
-                progress_percent = 15 + int((i / total_files) * 30)
-                progress_bar.progress(progress_percent, text=f"Processando arquivo {i+1} de {total_files}...")
+                with spinner_placeholder:
+                    st.markdown(f"""
+                    <div class="loader-container">
+                        <div class="loader"></div>
+                        <div class="loader-text">Processando arquivo {i+1} de {total_files}...</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 if uploaded_file.name.endswith('.csv'):
                     df = pd.read_csv(uploaded_file)
@@ -370,15 +411,28 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
                 continue
         
         if not dfs_import:
+            spinner_placeholder.empty()
             st.error("Nenhum arquivo válido encontrado")
             return None, None, None
         
-        progress_bar.progress(50, text="Concatenando dados...")
+        with spinner_placeholder:
+            st.markdown("""
+            <div class="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Concatenando dados...</div>
+            </div>
+            """, unsafe_allow_html=True)
         time.sleep(0.5)
         
         df_import = pd.concat(dfs_import, ignore_index=True)
         
-        progress_bar.progress(70, text="Mesclando dados...")
+        with spinner_placeholder:
+            st.markdown("""
+            <div class="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Mesclando dados...</div>
+            </div>
+            """, unsafe_allow_html=True)
         time.sleep(0.5)
         
         # Processar a coluna 'Conta controle' no dataframe de regras
@@ -398,7 +452,13 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
         contas_sem_depara = contas_sem_depara[['Conta controle', 'Data', 'Débito', 'Crédito']]
         contas_sem_depara = contas_sem_depara.drop_duplicates(subset=['Conta controle'])
         
-        progress_bar.progress(80, text="Processando colunas...")
+        with spinner_placeholder:
+            st.markdown("""
+            <div class="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Processando colunas...</div>
+            </div>
+            """, unsafe_allow_html=True)
         time.sleep(0.5)
         
         # Selecionar e renomear colunas
@@ -408,7 +468,13 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
         # Remover linhas com conta contabil vazia
         df_final = df_final.dropna(subset=['conta contabil'])
         
-        progress_bar.progress(90, text="Preparando arquivos para download...")
+        with spinner_placeholder:
+            st.markdown("""
+            <div class="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Preparando arquivos para download...</div>
+            </div>
+            """, unsafe_allow_html=True)
         time.sleep(0.5)
         
         # Salvar a planilha consolidada em arquivos de 1000 linhas cada (em memória)
@@ -427,8 +493,7 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
             output.seek(0)
             arquivos_gerados.append(output)
         
-        progress_bar.progress(100, text="Processamento concluído!")
-        time.sleep(0.5)
+        spinner_placeholder.empty() # Remove o spinner após o processamento
         
         success_message = f"""
         <div class="success-message">
@@ -452,7 +517,7 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
         
     except Exception as e:
         st.error(f"Ocorreu um erro: {str(e)}")
-        progress_bar.empty()
+        spinner_placeholder.empty() # Garante que o spinner seja removido em caso de erro
         with button_placeholder:
             if st.button('🔄 PROCESSAR NOVAMENTE', key='importar_again'):
                 st.session_state.processing = True
@@ -493,10 +558,11 @@ def main():
         help="Selecione os arquivos Excel ou CSV que deseja processar"
     )
     
-    # Botão de processamento
+    # Botão de processamento e placeholder para o spinner
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         button_placeholder = st.empty()
+        spinner_placeholder = st.empty() # Placeholder para o spinner
         
         if 'processing' not in st.session_state:
             st.session_state.processing = False
@@ -510,16 +576,16 @@ def main():
             elif not uploaded_files:
                 button_placeholder.button('⚙️ PROCESSAR', key='processar_disabled', disabled=True)
         else:
-            progress_bar = st.progress(0, text="Preparando para processar...")
-            df_final, contas_sem_depara, arquivos_gerados = processar_planilhas(uploaded_files, progress_bar, button_placeholder)
+            # Ao invés da barra de progresso, chamamos o processar_planilhas com o placeholder do spinner
+            df_final, contas_sem_depara, arquivos_gerados = processar_planilhas(uploaded_files, spinner_placeholder, button_placeholder)
             
             if contas_sem_depara is not None:
                 st.session_state.contas_sem_depara = contas_sem_depara
             if arquivos_gerados is not None:
                 st.session_state.arquivos_gerados = arquivos_gerados
             
-            time.sleep(1)
-            progress_bar.empty()
+            time.sleep(1) # Pequena pausa para garantir que a mensagem de sucesso apareça
+            spinner_placeholder.empty() # Garante que o spinner é removido ao final
             st.session_state.processing = False
     
     # Seção de download dos arquivos processados
@@ -561,6 +627,14 @@ def main():
             help="Clique para baixar todas as contas que não foram encontradas no depara",
             use_container_width=True
         )
+    
+    
+    # Rodapé
+    st.markdown("""
+    <footer>
+        Desenvolvido por RealI Automação. © 2025
+    </footer>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
