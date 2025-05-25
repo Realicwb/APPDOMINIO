@@ -10,6 +10,7 @@ from pathlib import Path
 import random
 import base64
 import zipfile
+from datetime import datetime
 
 # Configuração da página
 st.set_page_config(
@@ -272,6 +273,19 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 """
 
+# Função para formatar a data no padrão DD/MM/AAAA
+def formatar_data(data):
+    try:
+        if pd.isna(data):
+            return None
+        # Converter para datetime se ainda não for
+        if not isinstance(data, (datetime, pd.Timestamp)):
+            data = pd.to_datetime(data, errors='coerce')
+        # Formatar como string no padrão desejado
+        return data.strftime('%d/%m/%Y')
+    except:
+        return None
+
 # Função para criar um arquivo Excel em memória
 def criar_excel_em_memoria(df):
     output = io.BytesIO()
@@ -345,6 +359,10 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
                 # Processar a coluna 'Conta controle'
                 df['Conta controle'] = df['Conta controle'].astype(str).str.replace('.', '', regex=False)
                 df = df.dropna(subset=['Conta controle'])
+                
+                # Processar a coluna 'Data' para o formato DD/MM/AAAA
+                df['Data'] = df['Data'].apply(formatar_data)
+                df = df.dropna(subset=['Data'])
                 
                 dfs_import.append(df[required_cols])
             except Exception as e:
