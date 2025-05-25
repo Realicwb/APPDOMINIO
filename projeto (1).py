@@ -291,7 +291,7 @@ def criar_zip_em_memoria(arquivos):
 
 # Função para baixar o arquivo de regras do GitHub
 def baixar_regras_github():
-    url = "https://raw.githubusercontent.com/Realicwb/APPDOMINIO/main/Regras.xlsx"
+    url = "https://raw.githubusercontent.com/Realicwb/APPDOMINIO/main/Regras00.xlsx"
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -316,7 +316,7 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
             return None, None, None
         
         # Verificar colunas necessárias
-        if not all(col in df_import1.columns for col in ['conta', 'conta contabil']):
+        if not all(col in df_import1.columns for col in ['Conta controle', 'conta contabil']):
             st.error("Arquivo de regras não contém as colunas necessárias")
             return None, None, None
         
@@ -337,10 +337,14 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
                 else:
                     df = pd.read_excel(uploaded_file)
                 
-                required_cols = ['Data', 'conta', 'valor', 'valor2']
+                required_cols = ['Data', 'Conta controle', 'Débito', 'Crédito']
                 if not all(col in df.columns for col in required_cols):
                     st.warning(f"Arquivo {uploaded_file.name} não contém todas as colunas necessárias")
                     continue
+                
+                # Processar a coluna 'Conta controle'
+                df['Conta controle'] = df['Conta controle'].astype(str).str.replace('.', '', regex=False)
+                df = df.dropna(subset=['Conta controle'])
                 
                 dfs_import.append(df[required_cols])
             except Exception as e:
@@ -359,28 +363,29 @@ def processar_planilhas(arquivos_importados, progress_bar, button_placeholder):
         progress_bar.progress(70, text="Mesclando dados...")
         time.sleep(0.5)
         
+        # Processar a coluna 'Conta controle' no dataframe de regras
+        df_import1['Conta controle'] = df_import1['Conta controle'].astype(str).str.replace('.', '', regex=False)
+        df_import1 = df_import1.dropna(subset=['Conta controle'])
+        
         # Fazer o merge das planilhas
         df_final = pd.merge(
             df_import,
-            df_import1[['conta', 'conta contabil']],
-            on='conta',
+            df_import1[['Conta controle', 'conta contabil']],
+            on='Conta controle',
             how='left'
         )
         
         # Criar dataframe com contas sem depara
         contas_sem_depara = df_final[df_final['conta contabil'].isna()].copy()
-        contas_sem_depara = contas_sem_depara[['conta', 'Data', 'valor', 'valor2']]
-        contas_sem_depara = contas_sem_depara.drop_duplicates(subset=['conta'])
+        contas_sem_depara = contas_sem_depara[['Conta controle', 'Data', 'Débito', 'Crédito']]
+        contas_sem_depara = contas_sem_depara.drop_duplicates(subset=['Conta controle'])
         
         progress_bar.progress(80, text="Processando colunas...")
         time.sleep(0.5)
         
         # Selecionar e renomear colunas
-        df_final = df_final[['Data', 'conta contabil', 'valor', 'valor2']]
-        df_final.columns = ['Data', 'conta contabil', 'valor', 'valor2']
-        
-        # Remover os pontos da coluna 'conta contabil'
-        df_final['conta contabil'] = df_final['conta contabil'].astype(str).str.replace('.', '', regex=False)
+        df_final = df_final[['Data', 'conta contabil', 'Débito', 'Crédito']]
+        df_final.columns = ['Data', 'conta contabil', 'Débito', 'Crédito']
         
         # Remover linhas com conta contabil vazia
         df_final = df_final.dropna(subset=['conta contabil'])
