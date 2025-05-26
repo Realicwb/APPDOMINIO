@@ -15,7 +15,7 @@ from datetime import datetime
 # --- Configuração da Página e CSS/JS Globais ---
 st.set_page_config(
     page_title="REALI AUTOMAÇÃO",
-    page_icon="🐍",
+    page_icon="https://www.realiconsultoria.com.br/wp-content/uploads/2022/02/cropped-fav_Prancheta-1-150x150.png",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
