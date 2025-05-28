@@ -446,7 +446,7 @@ def criar_excel_em_memoria(df, sheet_name='Sheet1'):
 # Função para criar um arquivo CSV em memória
 def criar_csv_em_memoria(df):
     output = io.StringIO()
-    df.to_csv(output, index=False, header=False, sep=',', encoding='utf-8')
+    df.to_csv(output, index=False, header=False, sep=';', encoding='utf-8')  # separador alterado para ponto e vírgula
     output.seek(0)
     return io.BytesIO(output.getvalue().encode('utf-8'))
 
@@ -455,8 +455,8 @@ def criar_zip_em_memoria(arquivos):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
         for i, arquivo in enumerate(arquivos):
-            # arquivo é um BytesIO de CSV já
-            zip_file.writestr(f"CSV/planilha_consolidada_parte_{i+1}.csv", arquivo.getvalue())
+            # O conteúdo é CSV, mas o nome termina com .txt
+            zip_file.writestr(f"CSV/planilha_consolidada_parte_{i+1}.txt", arquivo.getvalue())
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -634,6 +634,12 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
                     lanc['Cta.cont./Nome PN'] = row['Cta.cont./Nome PN']
                 lancamentos.append(lanc)
         df_lancamentos = pd.DataFrame(lancamentos)
+
+        # Ajuste de tipos: valor com 2 casas decimais, Débito e Crédito inteiros
+        if not df_lancamentos.empty:
+            df_lancamentos['valor'] = df_lancamentos['valor'].astype(float).map(lambda x: f"{x:,.2f}".replace('.', ','))
+            df_lancamentos['Débito'] = df_lancamentos['Débito'].astype(int)
+            df_lancamentos['Crédito'] = df_lancamentos['Crédito'].astype(int)
 
         # Calcule o total de linhas e número de arquivos antes do loop
         total_linhas = len(df_lancamentos)
