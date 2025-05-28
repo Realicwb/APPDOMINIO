@@ -633,14 +633,13 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
         arquivos_gerados = []
 
         # Garante a ordem das colunas na exportação
-        lanc_cols = ['Data', 'valor', 'Débito', 'Crédito', 'Historico']
+        lanc_cols = ['Data', 'Débito', 'Crédito', 'valor', 'Historico']
         if 'Cta.cont./Nome PN' in df_lancamentos.columns:
             lanc_cols.append('Cta.cont./Nome PN')
         for i in range(num_arquivos):
             inicio = i * 1000
             fim = (i + 1) * 1000
             parte = df_lancamentos.iloc[inicio:fim]
-            
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 parte.to_excel(writer, index=False, columns=lanc_cols)
