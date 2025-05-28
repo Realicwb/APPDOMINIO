@@ -439,7 +439,7 @@ def formatar_data(data):
 def criar_excel_em_memoria(df, sheet_name='Sheet1'):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name=sheet_name)
+        df.to_excel(writer, index=False, sheet_name=sheet_name, header=False)  # header removido
     output.seek(0)
     return output
 
@@ -452,9 +452,9 @@ def criar_zip_em_memoria(arquivos):
             zip_file.writestr(f"EXCEL/planilha_consolidada_parte_{i+1}.xlsx", arquivo.getvalue())
             # Gera o TXT correspondente (mesmo conteúdo do Excel, mas em TXT separado por vírgula)
             arquivo.seek(0)
-            df = pd.read_excel(arquivo)
+            df = pd.read_excel(arquivo, header=None)  # lê sem cabeçalho
             txt_buffer = io.StringIO()
-            df.to_csv(txt_buffer, sep=',', index=False, encoding='utf-8')
+            df.to_csv(txt_buffer, sep=',', index=False, encoding='utf-8', header=False)  # header removido
             zip_file.writestr(f"TXT/planilha_consolidada_parte_{i+1}.txt", txt_buffer.getvalue())
     zip_buffer.seek(0)
     return zip_buffer
@@ -649,7 +649,7 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
             parte = df_lancamentos.iloc[inicio:fim]
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                parte.to_excel(writer, index=False, columns=lanc_cols)
+                parte.to_excel(writer, index=False, columns=lanc_cols, header=False)  # header removido
             output.seek(0)
             arquivos_gerados.append(output)
         
@@ -930,7 +930,7 @@ def tela_cruzamento_ecd():
                     if not contas_sem_depara.empty:
                         excel_sem_depara = criar_excel_em_memoria(contas_sem_depara, sheet_name='Contas sem Depara')
                         st.session_state.downloads_ecd.append(excel_sem_depara)
-                    
+
                     success_message = f"""
                     <div class="success-message">
                         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
