@@ -515,17 +515,22 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
                     df = pd.read_excel(uploaded_file)
                 
                 required_cols = ['Data', 'Conta controle', 'Débito', 'Crédito']
+                # Inclui a coluna "Cta.cont./Nome PN" se existir no arquivo importado
+                extra_cols = []
+                if 'Cta.cont./Nome PN' in df.columns:
+                    extra_cols.append('Cta.cont./Nome PN')
+                cols_to_use = required_cols + extra_cols
+
                 if not all(col in df.columns for col in required_cols):
                     st.warning(f"Arquivo {uploaded_file.name} não contém todas as colunas necessárias")
                     continue
-                
+
                 df['Conta controle'] = df['Conta controle'].astype(str).str.replace('.', '', regex=False)
                 df = df.dropna(subset=['Conta controle'])
-                
                 df['Data'] = df['Data'].apply(formatar_data)
                 df = df.dropna(subset=['Data'])
-                
-                dfs_import.append(df[required_cols])
+
+                dfs_import.append(df[cols_to_use])
             except Exception as e:
                 st.warning(f"Erro ao ler arquivo {uploaded_file.name}: {str(e)}")
                 continue
@@ -557,10 +562,15 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
         
         df_import1['Conta controle'] = df_import1['Conta controle'].astype(str).str.replace('.', '', regex=False)
         df_import1 = df_import1.dropna(subset=['Conta controle'])
-        
+        # REMOVE DUPLICIDADES NO DEPARA ANTES DO MERGE
+        merge_cols = ['Conta controle', 'conta contabil']
+        if 'Cta.cont./Nome PN' in df_import1.columns:
+            merge_cols.append('Cta.cont./Nome PN')
+        df_import1 = df_import1.drop_duplicates(subset=['Conta controle'])  # <-- ADICIONE ESTA LINHA
+
         df_final = pd.merge(
             df_import,
-            df_import1[['Conta controle', 'conta contabil']],
+            df_import1[merge_cols],
             on='Conta controle',
             how='left'
         )
@@ -578,32 +588,60 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
             """, unsafe_allow_html=True)
         time.sleep(0.5)
         
-        df_final = df_final[['Data', 'conta contabil', 'Débito', 'Crédito']]
-        df_final.columns = ['Data', 'conta contabil', 'Débito', 'Crédito']
-        
+        # Seleciona as colunas finais, incluindo 'Cta.cont./Nome PN' se veio do import
+        final_cols = ['Data', 'conta contabil', 'Débito', 'Crédito']
+        if 'Cta.cont./Nome PN' in df_import.columns:
+            final_cols.append('Cta.cont./Nome PN')
+        df_final = df_final[final_cols]
+        df_final.columns = final_cols
+
         df_final = df_final.dropna(subset=['conta contabil'])
-        
-        with spinner_placeholder:
-            st.markdown("""
-            <div class="loader-container">
-                <div class="loader"></div>
-                <div class="loader-text">Preparando arquivos para download...</div>
-            </div>
-            """, unsafe_allow_html=True)
-        time.sleep(0.5)
-        
-        total_linhas = len(df_final)
+
+        # Geração dos lançamentos
+        lancamentos = []
+        tem_nome_pn = 'Cta.cont./Nome PN' in df_final.columns
+        for _, row in df_final.iterrows():
+            # Lançamento de débito
+            if pd.notna(row['Débito']) and row['Débito'] != 0:
+                lanc = {
+                    'Data': row['Data'],
+                    'valor': row['Débito'],
+                    'Débito': row['conta contabil'],
+                    'Crédito': 266
+                }
+                if tem_nome_pn:
+                    lanc['Cta.cont./Nome PN'] = row['Cta.cont./Nome PN']
+                lancamentos.append(lanc)
+            # Lançamento de crédito
+            if pd.notna(row['Crédito']) and row['Crédito'] != 0:
+                lanc = {
+                    'Data': row['Data'],
+                    'valor': row['Crédito'],
+                    'Débito': 266,
+                    'Crédito': row['conta contabil']
+                }
+                if tem_nome_pn:
+                    lanc['Cta.cont./Nome PN'] = row['Cta.cont./Nome PN']
+                lancamentos.append(lanc)
+        df_lancamentos = pd.DataFrame(lancamentos)
+
+        # Calcule o total de linhas e número de arquivos antes do loop
+        total_linhas = len(df_lancamentos)
         num_arquivos = (total_linhas // 1000) + (1 if total_linhas % 1000 != 0 else 0)
         arquivos_gerados = []
-        
+
+        # Garante a ordem das colunas na exportação
+        lanc_cols = ['Data', 'valor', 'Débito', 'Crédito']
+        if 'Cta.cont./Nome PN' in df_lancamentos.columns:
+            lanc_cols.append('Cta.cont./Nome PN')
         for i in range(num_arquivos):
             inicio = i * 1000
             fim = (i + 1) * 1000
-            parte = df_final.iloc[inicio:fim]
+            parte = df_lancamentos.iloc[inicio:fim]
             
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                parte.to_excel(writer, index=False)
+                parte.to_excel(writer, index=False, columns=lanc_cols)
             output.seek(0)
             arquivos_gerados.append(output)
         
@@ -626,7 +664,7 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
             if st.button('🔄 PROCESSAR NOVAMENTE', key='importar_again'):
                 st.session_state.processing_dominio = True
         
-        return df_final, contas_sem_depara, arquivos_gerados
+        return df_lancamentos, contas_sem_depara, arquivos_gerados
         
     except Exception as e:
         st.error(f"Ocorreu um erro: {str(e)}")
