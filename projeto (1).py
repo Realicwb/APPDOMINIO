@@ -443,19 +443,20 @@ def criar_excel_em_memoria(df, sheet_name='Sheet1'):
     output.seek(0)
     return output
 
+# Função para criar um arquivo CSV em memória
+def criar_csv_em_memoria(df):
+    output = io.StringIO()
+    df.to_csv(output, index=False, header=False, sep=',', encoding='utf-8')
+    output.seek(0)
+    return io.BytesIO(output.getvalue().encode('utf-8'))
+
 # Função para criar um arquivo ZIP em memória com todos os arquivos, separados em pastas EXCEL e TXT
 def criar_zip_em_memoria(arquivos):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
         for i, arquivo in enumerate(arquivos):
-            # Salva o Excel na pasta EXCEL
-            zip_file.writestr(f"EXCEL/planilha_consolidada_parte_{i+1}.xlsx", arquivo.getvalue())
-            # Gera o TXT correspondente (mesmo conteúdo do Excel, mas em TXT separado por vírgula)
-            arquivo.seek(0)
-            df = pd.read_excel(arquivo, header=None)  # lê sem cabeçalho
-            txt_buffer = io.StringIO()
-            df.to_csv(txt_buffer, sep=',', index=False, encoding='utf-8', header=False)  # header removido
-            zip_file.writestr(f"TXT/planilha_consolidada_parte_{i+1}.txt", txt_buffer.getvalue())
+            # arquivo é um BytesIO de CSV já
+            zip_file.writestr(f"CSV/planilha_consolidada_parte_{i+1}.csv", arquivo.getvalue())
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -638,7 +639,6 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
         total_linhas = len(df_lancamentos)
         num_arquivos = (total_linhas // 1000) + (1 if total_linhas % 1000 != 0 else 0)
         arquivos_gerados = []
-
         # Garante a ordem das colunas na exportação
         lanc_cols = ['Data', 'Débito', 'Crédito', 'valor', 'Historico']
         if 'Cta.cont./Nome PN' in df_lancamentos.columns:
@@ -647,11 +647,8 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
             inicio = i * 1000
             fim = (i + 1) * 1000
             parte = df_lancamentos.iloc[inicio:fim]
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                parte.to_excel(writer, index=False, columns=lanc_cols, header=False)  # header removido
-            output.seek(0)
-            arquivos_gerados.append(output)
+            csv_buffer = criar_csv_em_memoria(parte[lanc_cols])
+            arquivos_gerados.append(csv_buffer)
         
         spinner_placeholder.empty()
         
@@ -772,12 +769,12 @@ def tela_importador_dominio():
         </div>
         """, unsafe_allow_html=True)
         
-        excel_file = criar_excel_em_memoria(st.session_state.contas_sem_depara_dominio, sheet_name='Contas sem depara Domínio')
+        csv_file = criar_csv_em_memoria(st.session_state.contas_sem_depara_dominio)
         st.download_button(
             label="📥 BAIXAR CONTAS SEM DEPARA",
-            data=excel_file,
-            file_name="contas_sem_depara_dominio.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            data=csv_file,
+            file_name="contas_sem_depara_dominio.csv",
+            mime="text/csv",
             key='download_contas_sem_depara_dominio',
             help="Clique para baixar todas as contas que não foram encontradas no depara",
             use_container_width=True
@@ -924,12 +921,12 @@ def tela_cruzamento_ecd():
                     st.session_state.contas_sem_depara_ecd = contas_sem_depara
                     
                     # Prepara os arquivos para download
-                    excel_cruzado = criar_excel_em_memoria(df_cruzado, sheet_name='Balancete Cruzado')
-                    st.session_state.downloads_ecd = [excel_cruzado]
+                    csv_cruzado = criar_csv_em_memoria(df_cruzado)
+                    st.session_state.downloads_ecd = [csv_cruzado]
                     
                     if not contas_sem_depara.empty:
-                        excel_sem_depara = criar_excel_em_memoria(contas_sem_depara, sheet_name='Contas sem Depara')
-                        st.session_state.downloads_ecd.append(excel_sem_depara)
+                        csv_sem_depara = criar_csv_em_memoria(contas_sem_depara)
+                        st.session_state.downloads_ecd.append(csv_sem_depara)
 
                     success_message = f"""
                     <div class="success-message">
@@ -971,8 +968,8 @@ def tela_cruzamento_ecd():
             st.download_button(
                 label="📥 BAIXAR BALANCETE CRUZADO",
                 data=st.session_state.downloads_ecd[0],
-                file_name="balancete_cruzado_ecd.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                file_name="balancete_cruzado_ecd.csv",
+                mime="text/csv",
                 key='download_cruzado_ecd',
                 help="Baixa o balancete com as contas referenciais cruzadas.",
                 use_container_width=True
@@ -991,8 +988,8 @@ def tela_cruzamento_ecd():
                 st.download_button(
                     label="📥 BAIXAR CONTAS SEM DEPARA (ECD)",
                     data=st.session_state.downloads_ecd[1],
-                    file_name="contas_sem_depara_ecd.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    file_name="contas_sem_depara_ecd.csv",
+                    mime="text/csv",
                     key='download_sem_depara_ecd',
                     help="Baixa a lista de contas do balancete que não foram encontradas no plano referencial.",
                     use_container_width=True
