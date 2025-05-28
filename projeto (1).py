@@ -607,7 +607,8 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
                     'Data': row['Data'],
                     'valor': row['Débito'],
                     'Débito': row['conta contabil'],
-                    'Crédito': 266
+                    'Crédito': 266,
+                    'Historico': ''
                 }
                 if tem_nome_pn:
                     lanc['Cta.cont./Nome PN'] = row['Cta.cont./Nome PN']
@@ -618,7 +619,8 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
                     'Data': row['Data'],
                     'valor': row['Crédito'],
                     'Débito': 266,
-                    'Crédito': row['conta contabil']
+                    'Crédito': row['conta contabil'],
+                    'Historico': ''
                 }
                 if tem_nome_pn:
                     lanc['Cta.cont./Nome PN'] = row['Cta.cont./Nome PN']
@@ -631,7 +633,7 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
         arquivos_gerados = []
 
         # Garante a ordem das colunas na exportação
-        lanc_cols = ['Data', 'valor', 'Débito', 'Crédito']
+        lanc_cols = ['Data', 'valor', 'Débito', 'Crédito', 'Historico']
         if 'Cta.cont./Nome PN' in df_lancamentos.columns:
             lanc_cols.append('Cta.cont./Nome PN')
         for i in range(num_arquivos):
