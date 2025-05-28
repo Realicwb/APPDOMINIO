@@ -443,12 +443,19 @@ def criar_excel_em_memoria(df, sheet_name='Sheet1'):
     output.seek(0)
     return output
 
-# Função para criar um arquivo ZIP em memória com todos os arquivos
+# Função para criar um arquivo ZIP em memória com todos os arquivos, separados em pastas EXCEL e TXT
 def criar_zip_em_memoria(arquivos):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
         for i, arquivo in enumerate(arquivos):
-            zip_file.writestr(f"planilha_consolidada_parte_{i+1}.xlsx", arquivo.getvalue())
+            # Salva o Excel na pasta EXCEL
+            zip_file.writestr(f"EXCEL/planilha_consolidada_parte_{i+1}.xlsx", arquivo.getvalue())
+            # Gera o TXT correspondente (mesmo conteúdo do Excel, mas em TXT separado por vírgula)
+            arquivo.seek(0)
+            df = pd.read_excel(arquivo)
+            txt_buffer = io.StringIO()
+            df.to_csv(txt_buffer, sep=',', index=False, encoding='utf-8')
+            zip_file.writestr(f"TXT/planilha_consolidada_parte_{i+1}.txt", txt_buffer.getvalue())
     zip_buffer.seek(0)
     return zip_buffer
 
