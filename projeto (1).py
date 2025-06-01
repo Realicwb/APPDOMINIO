@@ -637,21 +637,24 @@ def processar_planilhas_dominio(arquivos_importados, spinner_placeholder, button
 
         # Ajuste de tipos: valor com 2 casas decimais, Débito e Crédito inteiros
         if not df_lancamentos.empty:
-            df_lancamentos['valor'] = df_lancamentos['valor'].astype(float).map(lambda x: f"{x:,.2f}".replace('.', ','))
+            # Formata o valor para duas casas decimais, sem separador de milhar, decimal com vírgula
+            df_lancamentos['valor'] = df_lancamentos['valor'].astype(float).map(lambda x: f"{x:.2f}".replace('.', ','))
             df_lancamentos['Débito'] = df_lancamentos['Débito'].astype(int)
             df_lancamentos['Crédito'] = df_lancamentos['Crédito'].astype(int)
 
         # Calcule o total de linhas e número de arquivos antes do loop
         total_linhas = len(df_lancamentos)
-        num_arquivos = (total_linhas // 1000) + (1 if total_linhas % 1000 != 0 else 0)
+        # Altere aqui: de 1000 para 35000
+        linhas_por_arquivo = 35000
+        num_arquivos = (total_linhas // linhas_por_arquivo) + (1 if total_linhas % linhas_por_arquivo != 0 else 0)
         arquivos_gerados = []
         # Garante a ordem das colunas na exportação
         lanc_cols = ['Data', 'Débito', 'Crédito', 'valor', 'Historico']
         if 'Cta.cont./Nome PN' in df_lancamentos.columns:
             lanc_cols.append('Cta.cont./Nome PN')
         for i in range(num_arquivos):
-            inicio = i * 1000
-            fim = (i + 1) * 1000
+            inicio = i * linhas_por_arquivo
+            fim = (i + 1) * linhas_por_arquivo
             parte = df_lancamentos.iloc[inicio:fim]
             csv_buffer = criar_csv_em_memoria(parte[lanc_cols])
             arquivos_gerados.append(csv_buffer)
